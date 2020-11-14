@@ -357,7 +357,7 @@ int main(void)
   HAL_GPIO_WritePin(LED7_GPIO_Port, LED7_Pin, 1);
 
   initCanFilter();
-  initGyro();
+//  initGyro();
 
   HAL_Delay(100);
   HAL_GPIO_WritePin(LED6_GPIO_Port, LED6_Pin, 1);
