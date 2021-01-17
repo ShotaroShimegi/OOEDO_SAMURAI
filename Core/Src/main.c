@@ -85,13 +85,17 @@ float g_omega_roll  = 0.0f;
 float g_omega_yaw = 0.0f;
 uint16_t main_loop = 0;
 
+//for New ESC
+uint16_t friction_speed = 0;
+uint16_t friction_ob_speed = 0;
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void initFriction(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,6 +104,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == htim6.Instance) {
 		time_count++;
+
+		if(friction_speed > friction_ob_speed)			friction_speed--;
+		else if(friction_speed < friction_ob_speed)		friction_speed++;
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 	friction_speed);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 	friction_speed);
+
 	}
 	if(time_count == 0)	{
 		HAL_GPIO_TogglePin(LED5_GPIO_Port, LED5_Pin);
@@ -256,8 +266,7 @@ void transCAN()
 	HAL_CAN_AddTxMessage(&hcan1, &header, tx_data, &TxMailbox);
 }
 
-uint8_t selectMode()
-{
+uint8_t selectMode() {
 	uint8_t mode;
 	while(swe_state == HAL_GPIO_ReadPin(SWE_GPIO_Port, SWE_Pin)){
 	  if(swl_state != HAL_GPIO_ReadPin(SWL_GPIO_Port, SWL_Pin))
@@ -277,8 +286,8 @@ uint8_t selectMode()
 //	  showMode(mode);
 //	  printf("mode:%d\n",mode);
 	  HAL_Delay(10);
-
 	}
+	return mode;
 //	printf("START-mode%d\n",mode);
 }
 
@@ -359,6 +368,10 @@ int main(void)
   initCanFilter();
 //  initGyro();
 
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // friction wheel
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+  initFriction();
+
   HAL_Delay(100);
   HAL_GPIO_WritePin(LED6_GPIO_Port, LED6_Pin, 1);
   HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, 1);
@@ -380,14 +393,14 @@ int main(void)
 
 //	HAL_UART_Receive_DMA(&huart4, rx_uart, 2);
 //printf("OOEDO_SAMURAI_BEGINNING\n");
-
+/*
   HAL_UART_Receive_IT(&huart1, rx_uart, 2);
   HAL_UART_Receive_IT(&huart2, rx_uart, 2);
   HAL_UART_Receive_IT(&huart3, rx_uart, 2);
   HAL_UART_Receive_IT(&huart4, rx_uart, 2);
   HAL_UART_Receive_IT(&huart5, rx_uart, 2);
   HAL_UART_Receive_IT(&huart6, rx_uart, 2);
-
+*/
   MelodySummer();
 
   /* USER CODE END 2 */
@@ -472,7 +485,17 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void initFriction() {
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 250);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 250);
+	HAL_Delay(500);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 125);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 125);
+	HAL_Delay(500);
 
+	friction_ob_speed = 125;
+	friction_ob_speed = 250;
+}
 /* USER CODE END 4 */
 
 /**
